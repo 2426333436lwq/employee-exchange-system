@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>企业员工积分兑换系统 - 管理端</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue-router@3.5.1/dist/vue-router.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/element-ui@2.15.6/lib/index.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.15.6/lib/theme-chalk/index.css">
+  <link rel="stylesheet" href="src/styles/main.css">
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <aside class="sidebar" :class="{collapsed: sidebarCollapsed}">
+        <div class="sidebar-header">
+          <span class="sidebar-title"><i class="el-icon-setting"></i> 积分管理系统</span>
+          <div class="sidebar-toggle" @click="toggleSidebar">
+            <i class="el-icon-s-fold"></i>
+          </div>
+        </div>
+        <nav class="menu">
+          <div 
+            class="menu-item" 
+            :class="{active: $route.path === '/products'}"
+            @click="$router.push('/products')"
+          >
+            <i class="el-icon-goods"></i> <span>商品管理</span>
+          </div>
+          <div 
+            class="menu-item" 
+            :class="{active: $route.path === '/categories'}"
+            @click="$router.push('/categories')"
+          >
+            <i class="el-icon-folder-opened"></i> <span>分类管理</span>
+          </div>
+          <div 
+            class="menu-item" 
+            :class="{active: $route.path === '/orders'}"
+            @click="$router.push('/orders')"
+          >
+            <i class="el-icon-document"></i> <span>订单管理</span>
+          </div>
+        </nav>
+      </aside>
+      
+      <main class="main-content">
+        <header class="header">
+          <div class="header-right">
+            <span class="admin-text">管理员</span>
+            <el-dropdown style="margin-left: 10px;">
+              <i class="el-icon-user"></i>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item>个人中心</el-dropdown-item>
+                <el-dropdown-item>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+          </div>
+        </header>
+        
+        <div class="content">
+          <router-view></router-view>
+        </div>
+      </main>
+    </div>
+  </div>
+  
+  <script type="module" src="src/scripts/main.js"></script>
+</body>
+</html>
