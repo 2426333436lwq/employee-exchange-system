@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日兑换 - 企业员工积分兑换系统</title>
+    <link rel="stylesheet" href="../../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>管理员后台</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="../admin.html">仪表盘</a></li>
+                <li><a href="../user-management.html">用户管理</a></li>
+                <li><a href="../product-management.html">商品管理</a></li>
+                <li><a href="../exchange-management.html">兑换管理</a></li>
+                <li><a href="../points-management.html">积分管理</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <div class="nav-left">
+                    <h1>今日兑换统计</h1>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span id="userName">管理员</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <ul>
+                            <li><a href="../personal-info.html">个人信息</a></li>
+                            <li><a href="#" onclick="logout()">退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 今日兑换详情 -->
+            <div id="todayExchanges" class="fade-in">
+                <div class="dashboard-cards" style="margin-bottom: 30px;">
+                    <div class="dashboard-card">
+                        <div class="card-icon">📈</div>
+                        <div class="card-title">今日兑换</div>
+                        <div class="card-value">28</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">💎</div>
+                        <div class="card-title">消耗积分</div>
+                        <div class="card-value">8,560</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">✅</div>
+                        <div class="card-title">已完成</div>
+                        <div class="card-value">22</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">⏳</div>
+                        <div class="card-title">待处理</div>
+                        <div class="card-value">6</div>
+                    </div>
+                </div>
+                
+                <!-- 搜索框 -->
+                <div class="search-box">
+                    <input type="text" id="todaySearchInput" placeholder="搜索兑换记录...">
+                    <button class="btn btn-primary" onclick="searchTodayExchanges()">搜索</button>
+                </div>
+                
+                <!-- 今日兑换列表 -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>订单号</th>
+                                <th>用户</th>
+                                <th>商品</th>
+                                <th>积分</th>
+                                <th>兑换时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="todayExchangeList">
+                            <!-- 今日兑换数据将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="pagination">
+                    <button>上一页</button>
+                    <button class="active">1</button>
+                    <button>2</button>
+                    <button>3</button>
+                    <button>下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../js/app.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载用户信息
+            loadUserInfo();
+            // 加载今日兑换统计数据
+            loadTodayExchangeStatistics();
+        });
+        
+        /**
+         * 加载用户信息
+         */
+        function loadUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+            }
+        }
+        
+        /**
+         * 切换用户下拉菜单
+         */
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        /**
+         * 点击页面其他地方关闭下拉菜单
+         */
+        document.addEventListener('click', function(event) {
+            const userInfo = document.querySelector('.user-info');
+            const dropdown = document.getElementById('userDropdown');
+            if (!userInfo.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        /**
+         * 加载今日兑换统计数据
+         */
+        function loadTodayExchangeStatistics() {
+            const todayExchangeList = document.getElementById('todayExchangeList');
+            if (!todayExchangeList) return;
+
+            todayExchangeList.innerHTML = '';
+
+            // 从全局兑换记录数据获取并筛选今天的数据
+            const records = getExchangeRecords();
+            const todayStr = formatDate(new Date()).substring(0, 10);
+            const todayRecords = records.filter(r => r.exchangeTime && r.exchangeTime.startsWith(todayStr));
+
+            // 更新统计卡片
+            const cards = document.querySelectorAll('.dashboard-cards .dashboard-card .card-value');
+            if (cards.length >= 4) {
+                const completed = todayRecords.filter(r => r.status === '已完成').length;
+                const pending = todayRecords.filter(r => r.status === '待处理').length;
+                const totalPoints = todayRecords.reduce((sum, r) => sum + r.points, 0);
+                cards[0].textContent = todayRecords.length;
+                cards[1].textContent = totalPoints.toLocaleString();
+                cards[2].textContent = completed;
+                cards[3].textContent = pending;
+            }
+
+            todayRecords.forEach(item => {
+                const row = document.createElement('tr');
+                const actionButton = item.status === '待处理' ?
+                    `<button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="processTodayExchange('ORD-${item.id.toString().padStart(6, '0')}')">处理</button>` :
+                    '';
+                row.innerHTML = `
+                    <td>ORD-${item.id.toString().padStart(6, '0')}</td>
+                    <td>${item.userName}</td>
+                    <td>${item.productName}</td>
+                    <td>${item.points}</td>
+                    <td>${item.exchangeTime}</td>
+                    <td><span class="status-tag ${item.status === '已完成' ? 'status-completed' : 'status-pending'}">${item.status}</span></td>
+                    <td>${actionButton}</td>
+                `;
+                todayExchangeList.appendChild(row);
+            });
+
+            // 如果今天没有数据，显示提示
+            if (todayRecords.length === 0) {
+                todayExchangeList.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">今天暂无兑换记录</td></tr>';
+            }
+        }
+
+        /**
+         * 搜索今日兑换
+         */
+        function searchTodayExchanges() {
+            const searchInput = document.getElementById('todaySearchInput').value.toLowerCase();
+            const todayExchangeList = document.getElementById('todayExchangeList');
+            if (!todayExchangeList) return;
+
+            const records = getExchangeRecords();
+            const todayStr = formatDate(new Date()).substring(0, 10);
+            const todayRecords = records.filter(r =>
+                r.exchangeTime && r.exchangeTime.startsWith(todayStr) &&
+                (r.userName.toLowerCase().includes(searchInput) ||
+                 r.productName.toLowerCase().includes(searchInput))
+            );
+
+            todayExchangeList.innerHTML = '';
+            todayRecords.forEach(item => {
+                const row = document.createElement('tr');
+                const actionButton = item.status === '待处理' ?
+                    `<button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="processTodayExchange('ORD-${item.id.toString().padStart(6, '0')}')">处理</button>` :
+                    '';
+                row.innerHTML = `
+                    <td>ORD-${item.id.toString().padStart(6, '0')}</td>
+                    <td>${item.userName}</td>
+                    <td>${item.productName}</td>
+                    <td>${item.points}</td>
+                    <td>${item.exchangeTime}</td>
+                    <td><span class="status-tag ${item.status === '已完成' ? 'status-completed' : 'status-pending'}">${item.status}</span></td>
+                    <td>${actionButton}</td>
+                `;
+                todayExchangeList.appendChild(row);
+            });
+            if (todayRecords.length === 0) {
+                todayExchangeList.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">未找到匹配的兑换记录</td></tr>';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兑换管理 - 企业员工积分兑换系统</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>管理员后台</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin.html">仪表盘</a></li>
+                <li><a href="user-management.html">用户管理</a></li>
+                <li><a href="product-management.html">商品管理</a></li>
+                <li><a href="exchange-management.html" class="active">兑换管理</a></li>
+                <li><a href="points-management.html">积分管理</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <div class="nav-left">
+                    <h1>兑换管理</h1>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span id="userName">管理员</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <ul>
+                            <li><a href="personal-info.html">个人信息</a></li>
+                            <li><a href="#" onclick="logout()">退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 兑换管理内容 -->
+            <div class="dashboard">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索兑换记录...">
+                    <button class="btn btn-primary" onclick="searchExchanges()">搜索</button>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户</th>
+                                <th>商品</th>
+                                <th>积分</th>
+                                <th>兑换时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exchangeTableBody">
+                            <!-- 兑换记录数据将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button onclick="prevPage()">上一页</button>
+                    <button class="active">1</button>
+                    <button onclick="nextPage()">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载用户信息
+            loadUserInfo();
+            // 加载兑换记录列表
+            loadExchangeList();
+        });
+        
+        /**
+         * 加载用户信息
+         */
+        function loadUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+            }
+        }
+        
+        /**
+         * 切换用户下拉菜单
+         */
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        /**
+         * 点击页面其他地方关闭下拉菜单
+         */
+        document.addEventListener('click', function(event) {
+            const userInfo = document.querySelector('.user-info');
+            const dropdown = document.getElementById('userDropdown');
+            if (!userInfo.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        /**
+         * 加载兑换记录列表
+         */
+        function loadExchangeList() {
+            const exchangeTableBody = document.getElementById('exchangeTableBody');
+            if (!exchangeTableBody) return;
+            
+            const exchangeRecords = getExchangeRecords();
+            exchangeTableBody.innerHTML = '';
+            
+            exchangeRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.id}</td>
+                    <td>${record.userName}</td>
+                    <td>${record.productName}</td>
+                    <td>${record.points}</td>
+                    <td>${record.exchangeTime}</td>
+                    <td><span class="status-tag ${record.status === '已完成' ? 'status-completed' : 'status-pending'}">${record.status}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="processExchange(${record.id})">处理</button>
+                        <button class="btn btn-secondary" onclick="viewDetails(${record.id})">查看</button>
+                    </td>
+                `;
+                exchangeTableBody.appendChild(row);
+            });
+        }
+        
+        /**
+         * 搜索兑换记录
+         */
+        function searchExchanges() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const exchangeTableBody = document.getElementById('exchangeTableBody');
+            if (!exchangeTableBody) return;
+            
+            const exchangeRecords = getExchangeRecords();
+            exchangeTableBody.innerHTML = '';
+            
+            const filteredRecords = exchangeRecords.filter(record => 
+                record.userName.toLowerCase().includes(searchInput) || 
+                record.productName.toLowerCase().includes(searchInput)
+            );
+            
+            filteredRecords.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.id}</td>
+                    <td>${record.userName}</td>
+                    <td>${record.productName}</td>
+                    <td>${record.points}</td>
+                    <td>${record.exchangeTime}</td>
+                    <td><span class="status-tag ${record.status === '已完成' ? 'status-completed' : 'status-pending'}">${record.status}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="processExchange(${record.id})">处理</button>
+                        <button class="btn btn-secondary" onclick="viewDetails(${record.id})">查看</button>
+                    </td>
+                `;
+                exchangeTableBody.appendChild(row);
+            });
+        }
+        
+        /**
+         * 处理兑换记录 — 真实更新状态为"已完成"
+         * @param {number} recordId 记录ID
+         */
+        function processExchange(recordId) {
+            if (!confirm('确定要处理这个兑换记录吗？')) return;
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const record = data.exchangeRecords.find(r => r.id === recordId);
+            if (record) {
+                record.status = '已完成';
+                localStorage.setItem('exchange_system_data', JSON.stringify(data));
+                alert('兑换记录处理成功！');
+            } else {
+                alert('未找到该记录');
+            }
+            loadExchangeList();
+        }
+
+        /**
+         * 查看兑换记录详情
+         * @param {number} recordId 记录ID
+         */
+        function viewDetails(recordId) {
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const record = data.exchangeRecords.find(r => r.id === recordId);
+            if (record) {
+                alert(`订单详情\n━━━━━━━━━━━━━━━\n订单号：ORD-${String(record.id).padStart(6, '0')}\n用户：${record.userName}\n商品：${record.productName}\n积分：${record.points}\n兑换时间：${record.exchangeTime}\n状态：${record.status}`);
+            } else {
+                alert('未找到订单信息');
+            }
+        }
+        
+        /**
+         * 上一页
+         */
+        function prevPage() {
+            alert('上一页功能开发中...');
+        }
+        
+        /**
+         * 下一页
+         */
+        function nextPage() {
+            alert('下一页功能开发中...');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>积分管理 - 企业员工积分兑换系统</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>管理员后台</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin.html">仪表盘</a></li>
+                <li><a href="user-management.html">用户管理</a></li>
+                <li><a href="product-management.html">商品管理</a></li>
+                <li><a href="exchange-management.html">兑换管理</a></li>
+                <li><a href="points-management.html" class="active">积分管理</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <div class="nav-left">
+                    <h1>积分管理</h1>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span id="userName">管理员</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <ul>
+                            <li><a href="personal-info.html">个人信息</a></li>
+                            <li><a href="#" onclick="logout()">退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 积分管理内容 -->
+            <div class="dashboard">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索用户...">
+                    <button class="btn btn-primary" onclick="searchUsers()">搜索</button>
+                    <button class="btn btn-secondary" onclick="adjustPoints()">调整积分</button>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>姓名</th>
+                                <th>部门</th>
+                                <th>当前积分</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pointsTableBody">
+                            <!-- 用户积分数据将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button onclick="prevPage()">上一页</button>
+                    <button class="active">1</button>
+                    <button onclick="nextPage()">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 调整积分模态框 -->
+    <div class="modal" id="adjustPointsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">调整积分</h3>
+                <button class="modal-close" onclick="closeModal('adjustPointsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>选择用户</label>
+                    <select id="selectUser">
+                        <!-- 用户选项将通过JS动态生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>调整类型</label>
+                    <select id="adjustType">
+                        <option value="add">增加</option>
+                        <option value="subtract">减少</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>积分数量</label>
+                    <input type="number" id="pointsAmount" placeholder="请输入积分数量">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="pointsRemark" placeholder="请输入备注信息"></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('adjustPointsModal')">取消</button>
+                <button class="btn btn-primary" onclick="savePointsAdjustment()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载用户信息
+            loadUserInfo();
+            // 加载用户积分列表
+            loadPointsList();
+            // 加载用户选择下拉框
+            loadUserSelect();
+        });
+        
+        /**
+         * 加载用户信息
+         */
+        function loadUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+            }
+        }
+        
+        /**
+         * 切换用户下拉菜单
+         */
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        /**
+         * 点击页面其他地方关闭下拉菜单
+         */
+        document.addEventListener('click', function(event) {
+            const userInfo = document.querySelector('.user-info');
+            const dropdown = document.getElementById('userDropdown');
+            if (!userInfo.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        /**
+         * 加载用户积分列表
+         */
+        function loadPointsList() {
+            const pointsTableBody = document.getElementById('pointsTableBody');
+            if (!pointsTableBody) return;
+            
+            const users = getUsers();
+            pointsTableBody.innerHTML = '';
+            
+            users.forEach(user => {
+                if (user.role === 'employee') { // 只显示员工用户
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.name}</td>
+                        <td>${user.department}</td>
+                        <td>${user.points || 0}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="editPoints(${user.id})">编辑</button>
+                            <button class="btn btn-secondary" onclick="viewHistory(${user.id})">历史</button>
+                        </td>
+                    `;
+                    pointsTableBody.appendChild(row);
+                }
+            });
+        }
+        
+        /**
+         * 搜索用户
+         */
+        function searchUsers() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const pointsTableBody = document.getElementById('pointsTableBody');
+            if (!pointsTableBody) return;
+            
+            const users = getUsers();
+            pointsTableBody.innerHTML = '';
+            
+            const filteredUsers = users.filter(user => 
+                user.role === 'employee' && 
+                (user.username.toLowerCase().includes(searchInput) || 
+                 user.name.toLowerCase().includes(searchInput) || 
+                 user.department.toLowerCase().includes(searchInput))
+            );
+            
+            filteredUsers.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.name}</td>
+                    <td>${user.department}</td>
+                    <td>${user.points || 0}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editPoints(${user.id})">编辑</button>
+                        <button class="btn btn-secondary" onclick="viewHistory(${user.id})">历史</button>
+                    </td>
+                `;
+                pointsTableBody.appendChild(row);
+            });
+        }
+        
+        /**
+         * 调整积分
+         */
+        function adjustPoints() {
+            const modal = document.getElementById('adjustPointsModal');
+            modal.classList.add('show');
+        }
+        
+        /**
+         * 加载用户选择下拉框
+         */
+        function loadUserSelect() {
+            const selectUser = document.getElementById('selectUser');
+            if (!selectUser) return;
+            
+            const users = getUsers();
+            selectUser.innerHTML = '';
+            
+            users.forEach(user => {
+                if (user.role === 'employee') { // 只显示员工用户
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.name} (${user.username})`;
+                    selectUser.appendChild(option);
+                }
+            });
+        }
+        
+        /**
+         * 关闭模态框
+         * @param {string} modalId 模态框ID
+         */
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('show');
+        }
+        
+        /**
+         * 保存积分调整 — 真实写入 localStorage
+         */
+        function savePointsAdjustment() {
+            const userId = parseInt(document.getElementById('selectUser').value);
+            const type = document.getElementById('adjustType').value;
+            const amount = parseInt(document.getElementById('pointsAmount').value) || 0;
+            const remark = document.getElementById('pointsRemark').value.trim();
+
+            if (amount <= 0) {
+                alert('请输入有效的积分数量');
+                return;
+            }
+
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const user = data.users.find(u => u.id === userId);
+            if (!user) {
+                alert('用户不存在');
+                return;
+            }
+
+            if (type === 'add') {
+                user.points = (user.points || 0) + amount;
+            } else {
+                if ((user.points || 0) < amount) {
+                    alert('用户积分不足，无法减少');
+                    return;
+                }
+                user.points = (user.points || 0) - amount;
+            }
+
+            localStorage.setItem('exchange_system_data', JSON.stringify(data));
+
+            alert(`积分调整成功！${user.name} 当前积分：${user.points}`);
+            closeModal('adjustPointsModal');
+            document.getElementById('pointsAmount').value = '';
+            document.getElementById('pointsRemark').value = '';
+            loadPointsList();
+        }
+
+        /**
+         * 编辑用户积分
+         * @param {number} userId 用户ID
+         */
+        function editPoints(userId) {
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const user = data.users.find(u => u.id === userId);
+            if (!user) {
+                alert('用户不存在');
+                return;
+            }
+            const newPoints = parseInt(prompt(`设置 ${user.name} 的积分：`, user.points || 0));
+            if (newPoints === undefined || isNaN(newPoints) || newPoints < 0) return;
+            user.points = newPoints;
+            localStorage.setItem('exchange_system_data', JSON.stringify(data));
+            loadPointsList();
+        }
+
+        /**
+         * 查看积分历史
+         * @param {number} userId 用户ID
+         */
+        function viewHistory(userId) {
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const user = data.users.find(u => u.id === userId);
+            const records = data.exchangeRecords.filter(r => r.userName === user?.name);
+            if (records.length === 0) {
+                alert(`${user?.name} 暂无兑换记录`);
+                return;
+            }
+            let msg = `${user.name} 的兑换记录\n━━━━━━━━━━━━━━━\n`;
+            records.slice(0, 10).forEach(r => {
+                msg += `• ${r.exchangeTime}  ${r.productName}  -${r.points}分 [${r.status}]\n`;
+            });
+            if (records.length > 10) msg += `\n...共 ${records.length} 条记录`;
+            alert(msg);
+        }
+        
+        /**
+         * 上一页
+         */
+        function prevPage() {
+            alert('上一页功能开发中...');
+        }
+        
+        /**
+         * 下一页
+         */
+        function nextPage() {
+            alert('下一页功能开发中...');
+        }
+    </script>
+</body>
+</html>

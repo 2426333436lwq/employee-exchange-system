@@ -1,36 +1,13 @@
 # ============================================================
-# employee-exchange-system .gitignore
-# 员工积分兑换系统（前后端一体）
+# points-exchange-system .gitignore
+# 纯静态前端（HTML/CSS/JS），无构建步骤
 # ============================================================
 
-# ---------- 依赖 ----------
+# ---------- 依赖与构建 ----------
 node_modules/
-.pnpm-store/
-jspm_packages/
-bower_components/
-vendor/
-
-# ---------- 构建产物 ----------
 dist/
 build/
-output/
-unpackage/
-*.tsbuildinfo
-.vite/
 .cache/
-
-# ---------- 后端运行时数据（可由 seed 重建，不入库） ----------
-server/data/
-**/server/data/
-*.sqlite
-*.sqlite3
-
-# ---------- 数据库备份（含完整数据，严禁入库） ----------
-backups/
-**/backups/
-*.sql.gz
-*.sql
-*_before_restore_*.sql
 
 # ---------- 环境与密钥 ----------
 .env
@@ -41,11 +18,6 @@ backups/
 
 # ---------- 日志与临时文件 ----------
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-logs/
 *.tmp
 *.temp
 *.bak
@@ -59,19 +31,13 @@ reasonix.toml
 .trae/
 .rivet/
 *.swp
-*.swo
 *~
 
 # ---------- Python ----------
 __pycache__/
 *.py[cod]
-*$py.class
 .venv/
 venv/
-env/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
 
 # ---------- 操作系统 ----------
 .DS_Store

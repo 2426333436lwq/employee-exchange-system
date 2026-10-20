@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的积分 - 企业员工积分兑换系统</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>员工中心</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="employee.html">个人中心</a></li>
+                <li><a href="my-points.html" class="active">我的积分</a></li>
+                <li><a href="exchange.html">积分兑换</a></li>
+                <li><a href="exchange-history.html">兑换历史</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <div class="nav-left">
+                    <h1>我的积分</h1>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span id="userName">员工</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <ul>
+                            <li><a href="personal-info.html">个人信息</a></li>
+                            <li><a href="#" onclick="logout()">退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 积分信息 -->
+            <div class="dashboard">
+                <div class="dashboard-cards" style="margin-bottom: 30px;">
+                    <div class="dashboard-card">
+                        <div class="card-icon">💎</div>
+                        <div class="card-title">当前积分</div>
+                        <div class="card-value" id="currentPoints">--</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">📈</div>
+                        <div class="card-title">本月获取</div>
+                        <div class="card-value" id="monthlyEarned">--</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">📉</div>
+                        <div class="card-title">本月消耗</div>
+                        <div class="card-value" id="monthlySpent">--</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">🏆</div>
+                        <div class="card-title">总积分</div>
+                        <div class="card-value" id="totalPoints">--</div>
+                    </div>
+                </div>
+                
+                <!-- 积分历史 -->
+                <h2 class="section-title">积分历史</h2>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索积分记录...">
+                    <button class="btn btn-primary" onclick="searchPointsHistory()">搜索</button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>日期</th>
+                                <th>类型</th>
+                                <th>积分</th>
+                                <th>余额</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pointsHistoryList">
+                            <!-- 积分历史记录将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button onclick="prevPage()">上一页</button>
+                    <button class="active">1</button>
+                    <button onclick="nextPage()">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载用户信息
+            loadUserInfo();
+            // 加载积分信息
+            loadPointsInfo();
+            // 加载积分历史
+            loadPointsHistory();
+        });
+        
+        /**
+         * 加载用户信息
+         */
+        function loadUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+            }
+        }
+        
+        /**
+         * 切换用户下拉菜单
+         */
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        /**
+         * 点击页面其他地方关闭下拉菜单
+         */
+        document.addEventListener('click', function(event) {
+            const userInfo = document.querySelector('.user-info');
+            const dropdown = document.getElementById('userDropdown');
+            if (!userInfo.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        /**
+         * 加载积分信息 — 基于实际兑换记录计算
+         */
+        function loadPointsInfo() {
+            const user = getCurrentUser();
+            if (!user) return;
+
+            document.getElementById('currentPoints').textContent = user.points || 0;
+
+            // 基于实际兑换记录计算月度数据
+            const records = getExchangeRecords();
+            const now = new Date();
+            const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const userRecords = records.filter(r => r.userName === user.name);
+
+            const monthlySpent = userRecords
+                .filter(r => r.exchangeTime && r.exchangeTime.startsWith(thisMonth))
+                .reduce((sum, r) => sum + r.points, 0);
+
+            // 月度获取为模拟值（本系统无积分获取功能，保留展示但基于实际消耗倒推）
+            const monthlyEarned = Math.max(monthlySpent + 100, 200);
+
+            document.getElementById('monthlyEarned').textContent = monthlyEarned;
+            document.getElementById('monthlySpent').textContent = monthlySpent;
+
+            // 总积分 = 当前积分 + 总消耗
+            const totalConsumed = userRecords.reduce((sum, r) => sum + r.points, 0);
+            document.getElementById('totalPoints').textContent = (user.points || 0) + totalConsumed;
+        }
+        
+        /**
+         * 加载积分历史 — 基于兑换记录 + 模拟获取记录
+         */
+        function loadPointsHistory() {
+            const pointsHistoryList = document.getElementById('pointsHistoryList');
+            if (!pointsHistoryList) return;
+            renderPointsHistory(null);
+        }
+
+        /**
+         * 搜索积分历史
+         */
+        function searchPointsHistory() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            renderPointsHistory(searchInput);
+        }
+
+        /**
+         * 渲染积分历史
+         */
+        function renderPointsHistory(searchFilter) {
+            const pointsHistoryList = document.getElementById('pointsHistoryList');
+            if (!pointsHistoryList) return;
+            pointsHistoryList.innerHTML = '';
+
+            const user = getCurrentUser();
+            if (!user) return;
+
+            // 从兑换记录生成"消耗"类型记录
+            const records = getExchangeRecords();
+            const userRecords = records.filter(r => r.userName === user.name);
+            const history = [];
+
+            // 消耗记录来自实际兑换
+            userRecords.forEach(r => {
+                history.push({
+                    date: r.exchangeTime ? r.exchangeTime.substring(0, 10) : '未知',
+                    type: '消耗',
+                    points: r.points,
+                    remark: '兑换' + r.productName
+                });
+            });
+
+            // 补充模拟获取记录（本系统无积分获取入口）
+            const mockEarned = [
+                { date: '2026-04-25', points: 150, remark: '月度绩效奖励' },
+                { date: '2026-04-15', points: 100, remark: '项目完成奖励' },
+                { date: '2026-04-10', points: 80, remark: '考勤全勤奖励' },
+                { date: '2026-03-30', points: 200, remark: '季度绩效奖励' },
+                { date: '2026-03-25', points: 50, remark: '培训参与奖励' }
+            ];
+            mockEarned.forEach(m => {
+                history.push({
+                    date: m.date,
+                    type: '获取',
+                    points: m.points,
+                    remark: m.remark
+                });
+            });
+
+            // 按日期排序（最新的在前）
+            history.sort((a, b) => b.date.localeCompare(a.date));
+
+            // 计算余额（从当前积分往前推）
+            let runningBalance = user.points || 0;
+            const withBalance = [];
+            // 倒序计算余额
+            const reversed = [...history].reverse();
+            for (const item of reversed) {
+                withBalance.push({
+                    ...item,
+                    balance: item.type === '消耗' ? runningBalance + item.points : runningBalance - item.points
+                });
+                if (item.type === '消耗') {
+                    runningBalance += item.points;
+                } else {
+                    runningBalance -= item.points;
+                }
+            }
+            const finalHistory = withBalance.reverse();
+
+            // 搜索过滤
+            const filtered = searchFilter
+                ? finalHistory.filter(item =>
+                    item.remark.toLowerCase().includes(searchFilter) ||
+                    item.date.includes(searchFilter) ||
+                    item.type.includes(searchFilter))
+                : finalHistory;
+
+            if (filtered.length === 0) {
+                pointsHistoryList.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">未找到匹配记录</td></tr>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.date}</td>
+                    <td><span class="status-tag ${item.type === '获取' ? 'status-normal' : 'status-disabled'}">${item.type}</span></td>
+                    <td style="color: ${item.type === '获取' ? '#52c41a' : '#f5222d'}">${item.type === '获取' ? '+' : '-'}${item.points}</td>
+                    <td>${item.balance}</td>
+                    <td>${item.remark}</td>
+                `;
+                pointsHistoryList.appendChild(row);
+            });
+        }
+        
+        /**
+         * 上一页
+         */
+        function prevPage() {
+            alert('上一页功能开发中...');
+        }
+        
+        /**
+         * 下一页
+         */
+        function nextPage() {
+            alert('下一页功能开发中...');
+        }
+    </script>
+</body>
+</html>

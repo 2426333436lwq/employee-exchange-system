@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 企业员工积分兑换系统</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>管理员后台</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin.html">仪表盘</a></li>
+                <li><a href="user-management.html" class="active">用户管理</a></li>
+                <li><a href="product-management.html">商品管理</a></li>
+                <li><a href="exchange-management.html">兑换管理</a></li>
+                <li><a href="points-management.html">积分管理</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <div class="nav-left">
+                    <h1>用户管理</h1>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span id="userName">管理员</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <ul>
+                            <li><a href="personal-info.html">个人信息</a></li>
+                            <li><a href="#" onclick="logout()">退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 用户管理内容 -->
+            <div class="dashboard">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索用户...">
+                    <button class="btn btn-primary" onclick="searchUsers()">搜索</button>
+                    <button class="btn btn-secondary" onclick="addUser()">添加用户</button>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>姓名</th>
+                                <th>部门</th>
+                                <th>职位</th>
+                                <th>积分</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <!-- 用户数据将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button onclick="prevPage()">上一页</button>
+                    <button class="active">1</button>
+                    <button onclick="nextPage()">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加用户模态框 -->
+    <div class="modal" id="addUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">添加用户</h3>
+                <button class="modal-close" onclick="closeModal('addUserModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="newUsername" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="newPassword" placeholder="请输入密码">
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" id="newName" placeholder="请输入姓名">
+                </div>
+                <div class="form-group">
+                    <label>部门</label>
+                    <input type="text" id="newDepartment" placeholder="请输入部门">
+                </div>
+                <div class="form-group">
+                    <label>职位</label>
+                    <input type="text" id="newPosition" placeholder="请输入职位">
+                </div>
+                <div class="form-group">
+                    <label>积分</label>
+                    <input type="number" id="newPoints" placeholder="请输入积分" value="0">
+                </div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="newStatus">
+                        <option value="normal">正常</option>
+                        <option value="disabled">禁用</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeModal('addUserModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveUser()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载用户信息
+            loadUserInfo();
+            // 加载用户列表
+            loadUserList();
+        });
+        
+        /**
+         * 加载用户信息
+         */
+        function loadUserInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+            }
+        }
+        
+        /**
+         * 切换用户下拉菜单
+         */
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        /**
+         * 点击页面其他地方关闭下拉菜单
+         */
+        document.addEventListener('click', function(event) {
+            const userInfo = document.querySelector('.user-info');
+            const dropdown = document.getElementById('userDropdown');
+            if (!userInfo.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        /**
+         * 加载用户列表
+         */
+        function loadUserList() {
+            const userTableBody = document.getElementById('userTableBody');
+            if (!userTableBody) return;
+            
+            const users = getUsers();
+            userTableBody.innerHTML = '';
+            
+            users.forEach(user => {
+                if (user.role === 'employee') { // 只显示员工用户
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.name}</td>
+                        <td>${user.department}</td>
+                        <td>${user.position}</td>
+                        <td>${user.points || 0}</td>
+                        <td><span class="status-tag ${user.status === 'normal' ? 'status-normal' : 'status-disabled'}">${user.status === 'normal' ? '正常' : '禁用'}</span></td>
+                        <td>
+                            <button class="btn btn-primary" onclick="editUser(${user.id})">编辑</button>
+                            <button class="btn btn-secondary" onclick="deleteUser(${user.id})">删除</button>
+                        </td>
+                    `;
+                    userTableBody.appendChild(row);
+                }
+            });
+        }
+        
+        /**
+         * 搜索用户
+         */
+        function searchUsers() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const userTableBody = document.getElementById('userTableBody');
+            if (!userTableBody) return;
+            
+            const users = getUsers();
+            userTableBody.innerHTML = '';
+            
+            const filteredUsers = users.filter(user => 
+                user.role === 'employee' && 
+                (user.username.toLowerCase().includes(searchInput) || 
+                 user.name.toLowerCase().includes(searchInput) || 
+                 user.department.toLowerCase().includes(searchInput))
+            );
+            
+            filteredUsers.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.name}</td>
+                    <td>${user.department}</td>
+                    <td>${user.position}</td>
+                    <td>${user.points || 0}</td>
+                    <td><span class="status-tag ${user.status === 'normal' ? 'status-normal' : 'status-disabled'}">${user.status === 'normal' ? '正常' : '禁用'}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="editUser(${user.id})">编辑</button>
+                        <button class="btn btn-secondary" onclick="deleteUser(${user.id})">删除</button>
+                    </td>
+                `;
+                userTableBody.appendChild(row);
+            });
+        }
+        
+        /**
+         * 添加用户
+         */
+        function addUser() {
+            const modal = document.getElementById('addUserModal');
+            modal.classList.add('show');
+        }
+        
+        /**
+         * 关闭模态框
+         * @param {string} modalId 模态框ID
+         */
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('show');
+        }
+        
+        /**
+         * 保存用户 — 真实写入 localStorage
+         */
+        function saveUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value.trim();
+            const name = document.getElementById('newName').value.trim();
+            const department = document.getElementById('newDepartment').value.trim();
+            const position = document.getElementById('newPosition').value.trim();
+            const points = parseInt(document.getElementById('newPoints').value) || 0;
+            const status = document.getElementById('newStatus').value;
+
+            if (!username || !password || !name) {
+                alert('请完整填写用户信息（用户名、密码、姓名）');
+                return;
+            }
+
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const maxId = data.users.reduce((max, u) => Math.max(max, u.id), 0);
+            data.users.push({
+                id: maxId + 1,
+                username, password, role: 'employee',
+                name, department, position,
+                points, status
+            });
+            localStorage.setItem('exchange_system_data', JSON.stringify(data));
+
+            alert('用户添加成功！');
+            closeModal('addUserModal');
+            // 清空表单
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('newName').value = '';
+            document.getElementById('newDepartment').value = '';
+            document.getElementById('newPosition').value = '';
+            document.getElementById('newPoints').value = '0';
+            loadUserList();
+        }
+
+        /**
+         * 编辑用户
+         * @param {number} userId 用户ID
+         */
+        function editUser(userId) {
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const user = data.users.find(u => u.id === userId);
+            if (!user) {
+                alert('用户不存在');
+                return;
+            }
+            const newName = prompt('姓名：', user.name);
+            if (!newName || newName.trim() === '') return;
+            const newDept = prompt('部门：', user.department);
+            const newPos = prompt('职位：', user.position);
+            const newPoints = parseInt(prompt('积分：', user.points || 0)) || 0;
+            const newStatus = prompt('状态（normal/disabled）：', user.status);
+
+            user.name = newName.trim();
+            if (newDept) user.department = newDept;
+            if (newPos) user.position = newPos;
+            user.points = newPoints;
+            if (newStatus === 'normal' || newStatus === 'disabled') user.status = newStatus;
+
+            localStorage.setItem('exchange_system_data', JSON.stringify(data));
+            loadUserList();
+        }
+
+        /**
+         * 删除用户 — 真实删除
+         * @param {number} userId 用户ID
+         */
+        function deleteUser(userId) {
+            if (!confirm('确定要删除这个用户吗？')) return;
+            const data = JSON.parse(localStorage.getItem('exchange_system_data'));
+            const idx = data.users.findIndex(u => u.id === userId);
+            if (idx !== -1 && data.users[idx].role === 'employee') {
+                data.users.splice(idx, 1);
+                localStorage.setItem('exchange_system_data', JSON.stringify(data));
+                alert('用户删除成功！');
+            }
+            loadUserList();
+        }
+        
+        /**
+         * 上一页
+         */
+        function prevPage() {
+            alert('上一页功能开发中...');
+        }
+        
+        /**
+         * 下一页
+         */
+        function nextPage() {
+            alert('下一页功能开发中...');
+        }
+    </script>
+</body>
+</html>

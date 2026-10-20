@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>员工中心 - 企业员工积分兑换系统</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>员工中心</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="employee.html" class="active">个人中心</a></li>
+                <li><a href="my-points.html">我的积分</a></li>
+                <li><a href="exchange.html">积分兑换</a></li>
+                <li><a href="exchange-history.html">兑换历史</a></li>
+            </ul>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 顶部导航栏 -->
+            <div class="top-nav">
+                <div class="nav-left">
+                    <h1>个人中心</h1>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar"></div>
+                        <span id="userName">员工</span>
+                    </div>
+                    <div class="user-dropdown" id="userDropdown">
+                        <ul>
+                            <li><a href="personal-info.html">个人信息</a></li>
+                            <li><a href="#" onclick="logout()">退出登录</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 个人信息 -->
+            <div class="dashboard">
+                <h2 class="section-title">个人信息</h2>
+                <div class="dashboard-cards" style="margin-bottom: 30px;">
+                    <div class="dashboard-card">
+                        <div class="card-icon">👤</div>
+                        <div class="card-title">姓名</div>
+                        <div class="card-value" id="employeeName">--</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">🏢</div>
+                        <div class="card-title">部门</div>
+                        <div class="card-value" id="employeeDepartment">--</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">💼</div>
+                        <div class="card-title">职位</div>
+                        <div class="card-value" id="employeePosition">--</div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-icon">💎</div>
+                        <div class="card-title">当前积分</div>
+                        <div class="card-value" id="employeePoints">--</div>
+                    </div>
+                </div>
+                
+                <!-- 最近兑换记录 -->
+                <h2 class="section-title">最近兑换记录</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>订单号</th>
+                                <th>商品</th>
+                                <th>积分</th>
+                                <th>兑换时间</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeExchangeHistory">
+                            <!-- 最近兑换记录将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载用户信息
+            loadEmployeeInfo();
+            // 加载最近兑换记录
+            loadEmployeeExchangeHistory();
+        });
+        
+        /**
+         * 加载员工信息
+         */
+        function loadEmployeeInfo() {
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+                document.getElementById('employeeName').textContent = user.name;
+                document.getElementById('employeeDepartment').textContent = user.department;
+                document.getElementById('employeePosition').textContent = user.position;
+                document.getElementById('employeePoints').textContent = user.points || 0;
+            }
+        }
+        
+        /**
+         * 切换用户下拉菜单
+         */
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        /**
+         * 点击页面其他地方关闭下拉菜单
+         */
+        document.addEventListener('click', function(event) {
+            const userInfo = document.querySelector('.user-info');
+            const dropdown = document.getElementById('userDropdown');
+            if (!userInfo.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        /**
+         * 加载员工最近兑换记录
+         */
+        function loadEmployeeExchangeHistory() {
+            const employeeExchangeHistory = document.getElementById('employeeExchangeHistory');
+            if (!employeeExchangeHistory) return;
+            
+            employeeExchangeHistory.innerHTML = '';
+            
+            // 从全局兑换记录数据获取
+            const exchangeRecords = getExchangeRecords();
+            const user = getCurrentUser();
+            
+            if (user) {
+                // 显示当前用户的全部兑换记录
+                const userRecords = exchangeRecords.filter(record => record.userName === user.name);
+                
+                if (userRecords.length > 0) {
+                    userRecords.forEach(record => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>ORD-${record.id.toString().padStart(6, '0')}</td>
+                            <td>${record.productName}</td>
+                            <td>${record.points}</td>
+                            <td>${record.exchangeTime}</td>
+                            <td><span class="status-tag ${record.status === '已完成' ? 'status-completed' : 'status-pending'}">${record.status}</span></td>
+                        `;
+                        employeeExchangeHistory.appendChild(row);
+                    });
+                } else {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="5" style="text-align: center; color: #999;">暂无兑换记录</td>`;
+                    employeeExchangeHistory.appendChild(row);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

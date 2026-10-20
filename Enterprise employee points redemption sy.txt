@@ -1,0 +1,15 @@
+Enterprise employee points redemption system/
+├── index.html           # 登录页面
+├── admin/               # 管理员相关页面
+│   ├── admin.html       # 管理员仪表盘
+│   └── statistics/      # 统计页面
+│       ├── user-statistics.html     # 用户统计
+│       ├── product-statistics.html  # 商品统计
+│       ├── today-exchanges.html     # 今日兑换
+│       └── pending-orders.html      # 待处理订单
+├── employee/            # 员工相关页面
+│   └── employee.html    # 员工个人中心
+├── css/                 # 样式文件
+│   └── style.css        # 全局样式
+└── js/                  # JavaScript文件
+    └── app.js           # 核心逻辑和数据
